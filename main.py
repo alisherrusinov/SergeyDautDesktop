@@ -13,6 +13,11 @@ class Assistant:
 
         self.speaker = player.Player(os.path.join(settings.TEMPLATES_DIR, 'hi1.mp3'))
 
+        self.ACTIVATION_PHASES = ['system', 'assistant']
+
+        self.TIME_VARIANTS = ['time is it now', 'time is now', 'what is the time now', 'time is it', 'time it is',
+                              'tell me the time', 'do you have the time', 'have you got the time']
+
     def work(self):
         with self._microphone as source:
             self._recognizer.adjust_for_ambient_noise(source)
@@ -24,7 +29,8 @@ class Assistant:
                     statement = self._recognizer.recognize_google(audio, language="en_en")
                     statement = statement.lower()
                     print(statement)
-                    self.speaker.play()
+                    if(self.contains(statement, self.TIME_VARIANTS)):
+                        self.say('azaz')
                     break
                 except sr.UnknownValueError:  # Не смог распознать
                     pass
@@ -36,13 +42,31 @@ class Assistant:
             print("Пока!")
 
     def say(self, text):
-        print(text)
+        #TODO спикер работает в отдельном потоке так что можно будет сделать стоппинг как в оригинале
+        print(f'Запрос на синтез речи: {text}')
         tts = gTTS(text)
 
         directory = settings.TEMP_VOICE_DIR
         filename = f'temp{len(os.listdir(directory)) + 1}.mp3'
-        tts.save(filename)
+        tts.save(os.path.join(directory, filename))
         print('Успешно синтезирована речь')
+
+        self.speaker.change_voice(os.path.join(directory, filename))
+        self.speaker.play()
+
+    def contains(self, text, variants):
+        """
+        Функция которая проверяет наличие элемента в списке
+        :param text: Текст который сверять нужно
+        :param variants: Список вариантов
+        :return: true если есть совпадение в списке вариантов
+        """
+        status = False
+        for el in variants:
+            if (el == text):
+                status = True
+
+        return status
 
 
 helper = Assistant()
