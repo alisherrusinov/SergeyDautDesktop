@@ -50,7 +50,7 @@ class Assistant:
         self.CURRENT_STATE = 'IDLE'
         self.PREVIOUS_STATE = ''
 
-        self.SHOPPING_CART = []
+        self.SHOPPING_CART, self.shopping_cart_names = self.read_shopping_cart()
 
     def work(self):
         with self._microphone as source:
@@ -76,7 +76,6 @@ class Assistant:
                             self.CURRENT_STATE = 'IDLE'
                             print('Cменилось состояние с PLAYING_NEWS на IDLE')
 
-
                     if (self.contains(statement, self.CONTINUE_PHRASES)):
                         if (self.PREVIOUS_STATE == 'SPEAKING'):
                             self.speaker.play()
@@ -95,7 +94,7 @@ class Assistant:
                             self.say(text=self.products[self.current_product], previous_state='SEARCHING_PRODUCTS')
                     if (self.contains(statement, self.PREV_PRODUCT_VARIANTS)):
                         if (self.CURRENT_STATE == 'SEARCHING_PRODUCTS'):
-                            if(self.current_product == 0):
+                            if (self.current_product == 0):
                                 self.say(text='it is the first product', previous_state='SEARCHING_PRODUCTS')
                             else:
                                 self.current_product -= 1
@@ -229,13 +228,12 @@ class Assistant:
                         print(delta)
                         print(notification_label)
 
-
                         print(f'Запрос на синтез речи: {notification_label}')
                         tts = gTTS(notification_label)
 
                         directory = settings.TEMP_VOICE_DIR
                         filename = f'temp{len(os.listdir(directory)) + 1}.mp3'
-                        filename =os.path.join(directory, filename)
+                        filename = os.path.join(directory, filename)
                         tts.save(filename)
                         print('Успешно синтезирована речь')
 
@@ -246,8 +244,8 @@ class Assistant:
 
                         continue
 
-                    elif(self.CURRENT_STATE == 'SEARCHING_PRODUCTS'):
-                        if(self.contains(statement, self.EXIT_EBAY_VARIANTS)):
+                    elif (self.CURRENT_STATE == 'SEARCHING_PRODUCTS'):
+                        if (self.contains(statement, self.EXIT_EBAY_VARIANTS)):
                             self.CURRENT_STATE = 'IDLE'
                             self.say('ok', previous_state='IDLE')
                             break
@@ -257,11 +255,15 @@ class Assistant:
                             break
                         if (self.contains(statement, self.ADDING_TO_BASKET_VARIANTS)):
                             self.SHOPPING_CART.append(self.products_urls[self.current_product])
+                            self.shopping_cart_names.append(self.products[self.current_product])
                             self.say('Added', previous_state='SEARCHING_PRODUCTS')
                             break
                         if (self.contains(statement, self.SHOW_BASKET_VARIANTS)):
-                            self.show_basket()
-                            self.say('Showed', previous_state='SEARCHING_PRODUCTS')
+                            self.write_basket()
+                            answer = ""
+                            for el in self.shopping_cart_names:
+                                answer += f"{el}. "
+                            self.say(answer, previous_state='SEARCHING_PRODUCTS')
                             break
 
                     break
@@ -291,7 +293,8 @@ class Assistant:
 
             self.speaker.change_voice(os.path.join(directory, filename))
             played = self.speaker.play()  # Нужно для того чтобы отметить когда закончилось воспроизведение
-            thread = Thread(target=self.change_state, args=[self.PREVIOUS_STATE, played, os.path.join(directory, filename)])
+            thread = Thread(target=self.change_state,
+                            args=[self.PREVIOUS_STATE, played, os.path.join(directory, filename)])
             thread.start()
             print(thread.ident)
 
@@ -309,7 +312,8 @@ class Assistant:
 
             self.speaker.change_voice(os.path.join(directory, filename))
             played = self.speaker.play()  # Нужно для того чтобы отметить когда закончилось воспроизведение
-            thread = Thread(target=self.change_state, args=[self.PREVIOUS_STATE, played, os.path.join(directory, filename)])
+            thread = Thread(target=self.change_state,
+                            args=[self.PREVIOUS_STATE, played, os.path.join(directory, filename)])
             thread.start()
 
     def contains(self, text, variants):
@@ -353,11 +357,24 @@ class Assistant:
             os.popen(f"ffplay -nodisp -autoexit {filename}")
         print('таймер закончен')
 
-    def show_basket(self):
+    def write_basket(self):
         file = open('shoppingcart.txt', 'w')
         for product in self.SHOPPING_CART:
             file.write(f'{product}\n')
         file.close()
+        file = open('shoppingcartnames.txt', 'w')
+        for product in self.shopping_cart_names:
+            file.write(f'{product}\n')
+        file.close()
+
+    def read_shopping_cart(self):
+        file = open('shoppingcart.txt')
+        products = file.read().split('\n')
+        file.close()
+        file = open('shoppingcartnames.txt')
+        names = file.read().split('\n')
+        file.close()
+        return products, names
 
 
 helper = Assistant()
