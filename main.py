@@ -3,7 +3,7 @@ from gtts import gTTS
 from playsound import playsound
 from tools import player
 from tools.functions import current_time, current_date, day_of_the_week, get_description_weather, get_temperature, \
-    get_news, get_youtube_music, get_seconds_from_date
+    get_news, get_youtube_music, get_seconds_from_date, search_ebay, get_description_ebay
 import os
 import time
 from threading import Thread
@@ -50,6 +50,8 @@ class Assistant:
         self.CURRENT_STATE = 'IDLE'
         self.PREVIOUS_STATE = ''
 
+        self.SHOPPING_CART = []
+
     def work(self):
         with self._microphone as source:
             self._recognizer.adjust_for_ambient_noise(source)
@@ -86,6 +88,18 @@ class Assistant:
                             self.CURRENT_STATE = 'PLAYING_NEWS'
                             self.PREVIOUS_STATE = 'IDLE'
                             print('Cменилось состояние с IDLE на PLAYING_NEWS')
+
+                    if (self.contains(statement, self.NEXT_PRODUCT_VARIANTS)):
+                        if (self.CURRENT_STATE == 'SEARCHING_PRODUCTS'):
+                            self.current_product += 1
+                            self.say(text=self.products[self.current_product], previous_state='SEARCHING_PRODUCTS')
+                    if (self.contains(statement, self.PREV_PRODUCT_VARIANTS)):
+                        if (self.CURRENT_STATE == 'SEARCHING_PRODUCTS'):
+                            if(self.current_product == 0):
+                                self.say(text='it is the first product', previous_state='SEARCHING_PRODUCTS')
+                            else:
+                                self.current_product -= 1
+                                self.say(text=self.products[self.current_product], previous_state='SEARCHING_PRODUCTS')
 
                     if (self.CURRENT_STATE == 'IDLE'):
                         if (self.contains(statement, self.TIME_VARIANTS)):
@@ -182,6 +196,19 @@ class Assistant:
                             self.CURRENT_STATE = 'ADDING_NOTIFICATION'
                             continue
 
+                        if (self.contains(statement, self.EBAY_SEARCHING_VARIANTS)):
+                            statement = statement.replace('find me', '')
+                            statement = statement.replace('on ebay', '')
+                            statement = statement.replace('ebay', '')
+                            print(statement)
+
+                            self.products, self.products_urls, self.products_prices = search_ebay(statement)
+                            self.current_product = 0
+
+                            self.CURRENT_STATE = 'SEARCHING_PRODUCTS'
+                            self.say(text=self.products[self.current_product], previous_state='SEARCHING_PRODUCTS')
+                            break
+
 
                     elif (self.CURRENT_STATE == 'ADDING_NOTIFICATION'):
 
@@ -214,6 +241,24 @@ class Assistant:
                         self.CURRENT_STATE = 'IDLE'
 
                         continue
+
+                    elif(self.CURRENT_STATE == 'SEARCHING_PRODUCTS'):
+                        if(self.contains(statement, self.EXIT_EBAY_VARIANTS)):
+                            self.CURRENT_STATE = 'IDLE'
+                            self.say('ok', previous_state='IDLE')
+                            break
+                        if (self.contains(statement, self.DESCRIPTION_VARIANTS)):
+                            decsription = get_description_ebay(self.products_urls[self.current_product])
+                            self.say(decsription, previous_state='SEARCHING_PRODUCTS')
+                            break
+                        if (self.contains(statement, self.ADDING_TO_BASKET_VARIANTS)):
+                            self.SHOPPING_CART.append(self.products_urls[self.current_product])
+                            self.say('Added', previous_state='SEARCHING_PRODUCTS')
+                            break
+                        if (self.contains(statement, self.SHOW_BASKET_VARIANTS)):
+                            self.show_basket()
+                            self.say('Showed', previous_state='SEARCHING_PRODUCTS')
+                            break
 
                     break
                 except sr.UnknownValueError:  # Не смог распознать
@@ -302,6 +347,12 @@ class Assistant:
         else:
             os.popen(f"ffplay -nodisp -autoexit {filename}")
         print('таймер закончен')
+
+    def show_basket(self):
+        file = open('shoppingcart.txt', 'w')
+        for product in self.SHOPPING_CART:
+            file.write(f'{product}\n')
+        file.close()
 
 
 helper = Assistant()
