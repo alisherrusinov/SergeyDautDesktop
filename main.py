@@ -2,10 +2,12 @@ import speech_recognition as sr
 from gtts import gTTS
 from playsound import playsound
 from tools import player
-from tools.functions import current_time, current_date, day_of_the_week, get_description_weather, get_temperature, get_news
+from tools.functions import current_time, current_date, day_of_the_week, get_description_weather, get_temperature, \
+    get_news
 import os
 import time
 from threading import Thread
+import multiprocessing
 import settings
 
 
@@ -24,14 +26,18 @@ class Assistant:
                               'tell me the time', 'do you have the time', 'have you got the time']
         self.DAY_OF_THE_WEEK_VARIANTS = ['day of the week', 'day is it', 'day is it now', 'day is it today']
         self.DATE_VARIANTS = ['what date is it today', 'what date is it', "what's the date"]
-        self.WEATHER_TEMPERATURE_VARIANTS = ["what's the temperature in", 'what is the temperature', 'what, in degrees, is it', 'how many degrees', 'you know the temperature']
+        self.WEATHER_TEMPERATURE_VARIANTS = ["what's the temperature in", 'what is the temperature',
+                                             'what, in degrees, is it', 'how many degrees', 'you know the temperature']
         self.WEATHER_VARIANTS = ["what's the weather in", "what is the weather like in", "what is the weather in"]
-        self.NEWS_VARIANTS = ["what's going on in the world", 'show me the latest news', 'read the news for me', 'what do they write about in newspapers', "what's in the newspapers", "what's been in the newspapers", "news"]
-        self.TIMER_VARIANTS = ['set timer for',]
+        self.NEWS_VARIANTS = ["what's going on in the world", 'show me the latest news', 'read the news for me',
+                              'what do they write about in newspapers', "what's in the newspapers",
+                              "what's been in the newspapers", "news"]
+        self.TIMER_VARIANTS = ['set timer for', ]
         self.CHANGE_TIMER_VARIANTS = ['change timer time to']
         self.CANCEL_TIMER_VARIANTS = ['remove timer', 'cancel timer', 'delete timer']
         self.ALARM_VARIANTS = ['set alarm for', 'set  alarm at']
-        self.NOTIFICATION_ADDING_VARIANTS = ['new notification', 'add new notification', 'notification', 'add new reminder']
+        self.NOTIFICATION_ADDING_VARIANTS = ['new notification', 'add new notification', 'notification',
+                                             'add new reminder']
         self.MUSIC_PLAY_VARIANTS = ['play ']
         self.EBAY_SEARCHING_VARIANTS = ['ebay']
         self.NEXT_PRODUCT_VARIANTS = ['next', 'move to the next one', 'move on']
@@ -56,7 +62,7 @@ class Assistant:
                     statement = statement.lower()
                     print(statement)
 
-                    if (self.contains(statement, self.STOP_PHRASES)): # Продолжить речь
+                    if (self.contains(statement, self.STOP_PHRASES)):  # Продолжить речь
                         if (self.CURRENT_STATE == 'SPEAKING'):
                             self.speaker.stop()
                             self.PREVIOUS_STATE = 'SPEAKING'
@@ -80,7 +86,7 @@ class Assistant:
                             self.PREVIOUS_STATE = 'IDLE'
                             print('Cменилось состояние с IDLE на PLAYING_NEWS')
 
-                    if(self.CURRENT_STATE == 'IDLE'):
+                    if (self.CURRENT_STATE == 'IDLE'):
                         if (self.contains(statement, self.TIME_VARIANTS)):
                             self.say(text=current_time(), previous_state='IDLE')
                             break
@@ -101,7 +107,7 @@ class Assistant:
                             break
                         if (self.contains(statement, self.TIMER_VARIANTS)):
                             for item in self.TIMER_VARIANTS:
-                                if(item in statement):
+                                if (item in statement):
                                     statement = statement.replace(item, "")
 
                             if ('minute' in statement):
@@ -121,14 +127,14 @@ class Assistant:
 
                             print(f'Таймер на {delay} секунд')
 
-                            self.timer_thread = Thread(target=self.timer, args=[delay])
+                            self.timer_thread = multiprocessing.Process(target=self.timer, args=[delay])
                             self.timer_thread.start()
 
                             self.say(text='Started timer', previous_state='IDLE')
                             break
 
                     if (self.contains(statement, self.CANCEL_TIMER_VARIANTS)):
-                        self.timer_thread.kill()
+                        self.timer_thread.terminate()
                         print('поток вроде сдох')
                         break
 
@@ -144,8 +150,8 @@ class Assistant:
             exit()
 
     def say(self, text, speaker='None', previous_state='IDLE'):
-        #TODO спикер работает в отдельном потоке так что можно будет сделать стоппинг как в оригинале
-        if(speaker == 'None'):
+        # TODO спикер работает в отдельном потоке так что можно будет сделать стоппинг как в оригинале
+        if (speaker == 'None'):
             print(f'Запрос на синтез речи: {text}')
             tts = gTTS(text)
 
@@ -158,11 +164,12 @@ class Assistant:
             self.CURRENT_STATE = 'SPEAKING'
 
             self.speaker.change_voice(os.path.join(directory, filename))
-            played = self.speaker.play() # Нужно для того чтобы отметить когда закончилось воспроизведение
+            played = self.speaker.play()  # Нужно для того чтобы отметить когда закончилось воспроизведение
             thread = Thread(target=self.change_state, args=[self.PREVIOUS_STATE, played])
             thread.start()
+            print(thread.ident)
 
-        elif(speaker == 'News'):
+        elif (speaker == 'News'):
             print(f'Запрос на синтез речи: {text}')
             tts = gTTS(text)
 
@@ -195,7 +202,7 @@ class Assistant:
 
     def get_city_name(self, city, variants):
         for el in variants:
-            if(el in city):
+            if (el in city):
                 city = city.replace(el, "")
         return city
 
@@ -213,8 +220,8 @@ class Assistant:
     def timer(self, delay):
         print(f'Начат таймер на {delay} секунд')
         time.sleep(delay)
-        self.speaker.change_voice(f'{settings.TEMPLATES_DIR}/alarm.mp3')
-        self.speaker.play()
+        os.popen(f"ffplay -nodisp -autoexit {os.path.join(settings.TEMPLATES_DIR, 'alarm.mp3')}")
+        print('таймер закончен')
 
 
 helper = Assistant()
