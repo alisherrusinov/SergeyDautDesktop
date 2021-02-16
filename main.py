@@ -291,7 +291,7 @@ class Assistant:
 
             self.speaker.change_voice(os.path.join(directory, filename))
             played = self.speaker.play()  # Нужно для того чтобы отметить когда закончилось воспроизведение
-            thread = Thread(target=self.change_state, args=[self.PREVIOUS_STATE, played])
+            thread = Thread(target=self.change_state, args=[self.PREVIOUS_STATE, played, os.path.join(directory, filename)])
             thread.start()
             print(thread.ident)
 
@@ -309,7 +309,7 @@ class Assistant:
 
             self.speaker.change_voice(os.path.join(directory, filename))
             played = self.speaker.play()  # Нужно для того чтобы отметить когда закончилось воспроизведение
-            thread = Thread(target=self.change_state, args=[self.PREVIOUS_STATE, played])
+            thread = Thread(target=self.change_state, args=[self.PREVIOUS_STATE, played, os.path.join(directory, filename)])
             thread.start()
 
     def contains(self, text, variants):
@@ -332,7 +332,7 @@ class Assistant:
                 city = city.replace(el, "")
         return city
 
-    def change_state(self, prev, delay):
+    def change_state(self, prev, delay, filename):
         """
         Функция которая меняет состояние бота после синтеза речи
         :param prev: Состояние, которое будет поставлено
@@ -342,6 +342,7 @@ class Assistant:
         time.sleep(delay)
         self.CURRENT_STATE = prev
         print('Состояние сменилось на ', prev)
+        os.popen(f'rm {filename}')
 
     def timer(self, delay, filename='alarm.mp3'):
         print(f'Начат таймер на {delay} секунд')
