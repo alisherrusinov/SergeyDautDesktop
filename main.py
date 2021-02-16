@@ -3,7 +3,7 @@ from gtts import gTTS
 from playsound import playsound
 from tools import player
 from tools.functions import current_time, current_date, day_of_the_week, get_description_weather, get_temperature, \
-    get_news, get_youtube_music
+    get_news, get_youtube_music, get_seconds_from_date
 import os
 import time
 from threading import Thread
@@ -133,50 +133,87 @@ class Assistant:
 
                             self.say(text='Started timer', previous_state='IDLE')
                             break
+                        if (self.contains(statement, self.CHANGE_TIMER_VARIANTS)):
+                            for item in self.CHANGE_TIMER_VARIANTS:
+                                if (item in statement):
+                                    statement = statement.replace(item, "")
 
-                    if (self.contains(statement, self.CHANGE_TIMER_VARIANTS)):
-                        for item in self.CHANGE_TIMER_VARIANTS:
-                            if (item in statement):
-                                statement = statement.replace(item, "")
+                            if ('minute' in statement):
+                                statement = statement.replace('minutes', "")
+                                statement = statement.replace('minute', "")
+                                delay = int(statement) * 60
 
-                        if ('minute' in statement):
-                            statement = statement.replace('minutes', "")
-                            statement = statement.replace('minute', "")
-                            delay = int(statement) * 60
+                            if ('second' in statement):
+                                statement = statement.replace('seconds', "")
+                                statement = statement.replace('second', "")
+                                delay = int(statement)
 
-                        if ('second' in statement):
-                            statement = statement.replace('seconds', "")
-                            statement = statement.replace('second', "")
-                            delay = int(statement)
+                            if ('hour' in statement):
+                                statement = statement.replace('hours', "")
+                                statement = statement.replace('hour', "")
+                                delay = int(statement) * 3600
 
-                        if ('hour' in statement):
-                            statement = statement.replace('hours', "")
-                            statement = statement.replace('hour', "")
-                            delay = int(statement) * 3600
+                            print(f'Изменен таймер на {delay} секунд')
 
-                        print(f'Изменен таймер на {delay} секунд')
+                            self.timer_thread.kill()
+                            self.timer_thread = multiprocessing.Process(target=self.timer, args=[delay])
+                            self.timer_thread.start()
 
-                        self.timer_thread.kill()
-                        self.timer_thread = multiprocessing.Process(target=self.timer, args=[delay])
-                        self.timer_thread.start()
+                            self.say(text='Started timer', previous_state='IDLE')
+                            break
 
-                        self.say(text='Started timer', previous_state='IDLE')
-                        break
+                        if (self.contains(statement, self.CANCEL_TIMER_VARIANTS)):
+                            self.timer_thread.kill()
+                            print('поток вроде сдох')
+                            break
 
-                    if (self.contains(statement, self.CANCEL_TIMER_VARIANTS)):
-                        self.timer_thread.kill()
-                        print('поток вроде сдох')
-                        break
+                        if (self.contains(statement, self.MUSIC_PLAY_VARIANTS)):
+                            statement = statement.replace('play ', "")
+                            song = get_youtube_music(statement, settings.MUSIC_DIR)
+                            self.speaker.change_voice(song)
+                            time.sleep(1.5)
+                            self.speaker.play()
+                            self.CURRENT_STATE = 'SPEAKING'
+                            self.PREVIOUS_STATE = 'IDLE'
+                            break
 
-                    if (self.contains(statement, self.MUSIC_PLAY_VARIANTS)):
-                        statement = statement.replace('play ', "")
-                        song = get_youtube_music(statement, settings.MUSIC_DIR)
-                        self.speaker.change_voice(song)
-                        time.sleep(1.5)
-                        self.speaker.play()
-                        self.CURRENT_STATE = 'SPEAKING'
-                        self.PREVIOUS_STATE = 'IDLE'
-                        break
+                        if (self.contains(statement, self.NOTIFICATION_ADDING_VARIANTS)):
+                            self.say(text='tell me what should I remind', previous_state='ADDING_NOTIFICATION')
+                            self.CURRENT_STATE = 'ADDING_NOTIFICATION'
+                            continue
+
+
+                    elif (self.CURRENT_STATE == 'ADDING_NOTIFICATION'):
+
+                        notification_label = statement
+
+                        self.say(text='tell me when should i remind', previous_state='ADDING_DATE_NOTIFICATION')
+
+                        self.CURRENT_STATE = 'ADDING_DATE_NOTIFICATION'
+
+                        continue
+
+                    elif (self.CURRENT_STATE == 'ADDING_DATE_NOTIFICATION'):
+                        delta = get_seconds_from_date(statement)
+                        print(delta)
+                        print(notification_label)
+
+
+                        print(f'Запрос на синтез речи: {notification_label}')
+                        tts = gTTS(notification_label)
+
+                        directory = settings.TEMP_VOICE_DIR
+                        filename = f'temp{len(os.listdir(directory)) + 1}.mp3'
+                        filename =os.path.join(directory, filename)
+                        tts.save(filename)
+                        print('Успешно синтезирована речь')
+
+                        self.reminder_thread = multiprocessing.Process(target=self.timer, args=[delta, filename])
+                        self.reminder_thread.start()
+
+                        self.CURRENT_STATE = 'IDLE'
+
+                        continue
 
                     break
                 except sr.UnknownValueError:  # Не смог распознать
@@ -257,10 +294,13 @@ class Assistant:
         self.CURRENT_STATE = prev
         print('Состояние сменилось на ', prev)
 
-    def timer(self, delay):
+    def timer(self, delay, filename='alarm.mp3'):
         print(f'Начат таймер на {delay} секунд')
         time.sleep(delay)
-        os.popen(f"ffplay -nodisp -autoexit {os.path.join(settings.TEMPLATES_DIR, 'alarm.mp3')}")
+        if filename == 'alarm.mp3':
+            os.popen(f"ffplay -nodisp -autoexit {os.path.join(settings.TEMPLATES_DIR, 'alarm.mp3')}")
+        else:
+            os.popen(f"ffplay -nodisp -autoexit {filename}")
         print('таймер закончен')
 
 
