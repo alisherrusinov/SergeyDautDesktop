@@ -133,8 +133,37 @@ class Assistant:
                             self.say(text='Started timer', previous_state='IDLE')
                             break
 
+                    if (self.contains(statement, self.CHANGE_TIMER_VARIANTS)):
+                        for item in self.CHANGE_TIMER_VARIANTS:
+                            if (item in statement):
+                                statement = statement.replace(item, "")
+
+                        if ('minute' in statement):
+                            statement = statement.replace('minutes', "")
+                            statement = statement.replace('minute', "")
+                            delay = int(statement) * 60
+
+                        if ('second' in statement):
+                            statement = statement.replace('seconds', "")
+                            statement = statement.replace('second', "")
+                            delay = int(statement)
+
+                        if ('hour' in statement):
+                            statement = statement.replace('hours', "")
+                            statement = statement.replace('hour', "")
+                            delay = int(statement) * 3600
+
+                        print(f'Изменен таймер на {delay} секунд')
+
+                        self.timer_thread.kill()
+                        self.timer_thread = multiprocessing.Process(target=self.timer, args=[delay])
+                        self.timer_thread.start()
+
+                        self.say(text='Started timer', previous_state='IDLE')
+                        break
+
                     if (self.contains(statement, self.CANCEL_TIMER_VARIANTS)):
-                        self.timer_thread.terminate()
+                        self.timer_thread.kill()
                         print('поток вроде сдох')
                         break
 
