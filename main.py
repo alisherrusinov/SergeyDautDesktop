@@ -2,7 +2,7 @@ import speech_recognition as sr
 from gtts import gTTS
 from playsound import playsound
 from tools import player
-from tools.functions import current_time, current_date, day_of_the_week, get_description_weather
+from tools.functions import current_time, current_date, day_of_the_week, get_description_weather, get_temperature, get_news
 import os
 import settings
 
@@ -15,6 +15,8 @@ class Assistant:
         self.speaker = player.Player(os.path.join(settings.TEMPLATES_DIR, 'hi1.mp3'))
 
         self.ACTIVATION_PHASES = ['system', 'assistant']
+        self.STOP_PHRASES = ['stop', 'shut up', 'shut down']
+        self.CONTINUE_PHRASES = ['resume', 'Resume', 'continue', 'Continue', 'go on', 'Go on']
 
         self.TIME_VARIANTS = ['time is it now', 'time is now', 'what is the time now', 'time is it', 'time it is',
                               'tell me the time', 'do you have the time', 'have you got the time']
@@ -37,6 +39,9 @@ class Assistant:
         self.ADDING_TO_BASKET_VARIANTS = ['add to basket']
         self.SHOW_BASKET_VARIANTS = ['show my shopping cart', 'my shopping cart', 'show my basket']
 
+        self.CURRENT_STATE = 'IDLE'
+        self.PREVIOUS_STATE = ''
+
     def work(self):
         with self._microphone as source:
             self._recognizer.adjust_for_ambient_noise(source)
@@ -48,8 +53,38 @@ class Assistant:
                     statement = self._recognizer.recognize_google(audio, language="en_en")
                     statement = statement.lower()
                     print(statement)
-                    if(self.contains(statement, self.TIME_VARIANTS)):
-                        self.say(current_time())
+
+                    if (self.contains(statement, self.STOP_PHRASES)): # Продолжить речь
+                        if (self.CURRENT_STATE == 'SPEAKING'):
+                            self.speaker.stop()
+                            self.PREVIOUS_STATE = 'SPEAKING'
+                            self.CURRENT_STATE = 'IDLE'
+                    if (self.contains(statement, self.CONTINUE_PHRASES)):
+                        if (self.PREVIOUS_STATE == 'SPEAKING'):
+                            self.speaker.play()
+                            self.CURRENT_STATE = 'SPEAKING'
+                            self.PREVIOUS_STATE = 'IDLE'
+
+                    if(self.CURRENT_STATE == 'IDLE'):
+                        if (self.contains(statement, self.TIME_VARIANTS)):
+                            self.say(text=current_time(), previous_state='IDLE')
+                            break
+                        if (self.contains(statement, self.DAY_OF_THE_WEEK_VARIANTS)):
+                            self.say(text=day_of_the_week(), previous_state='IDLE')
+                            break
+                        if (self.contains(statement, self.DATE_VARIANTS)):
+                            self.say(text=current_date(), previous_state='IDLE')
+                            break
+                        if (self.contains(statement, self.WEATHER_TEMPERATURE_VARIANTS)):
+                            city = self.get_city_name(statement, self.WEATHER_TEMPERATURE_VARIANTS)
+                            self.say(text=get_temperature(city), previous_state='IDLE')
+                            break
+                        if (self.contains(statement, self.NEWS_VARIANTS)):
+                            news, urls = get_news()
+                            news = "".join(news[:10])
+                            self.say(text=news, previous_state='IDLE', speaker='News')
+                            break
+
                     break
                 except sr.UnknownValueError:  # Не смог распознать
                     pass
@@ -59,19 +94,41 @@ class Assistant:
                     break
         except KeyboardInterrupt:
             print("Пока!")
+            exit()
 
-    def say(self, text):
+    def say(self, text, speaker='None', previous_state='IDLE'):
         #TODO спикер работает в отдельном потоке так что можно будет сделать стоппинг как в оригинале
-        print(f'Запрос на синтез речи: {text}')
-        tts = gTTS(text)
+        if(speaker == 'None'):
+            print(f'Запрос на синтез речи: {text}')
+            tts = gTTS(text)
 
-        directory = settings.TEMP_VOICE_DIR
-        filename = f'temp{len(os.listdir(directory)) + 1}.mp3'
-        tts.save(os.path.join(directory, filename))
-        print('Успешно синтезирована речь')
+            directory = settings.TEMP_VOICE_DIR
+            filename = f'temp{len(os.listdir(directory)) + 1}.mp3'
+            tts.save(os.path.join(directory, filename))
+            print('Успешно синтезирована речь')
 
-        self.speaker.change_voice(os.path.join(directory, filename))
-        self.speaker.play()
+            self.PREVIOUS_STATE = previous_state
+            self.CURRENT_STATE = 'SPEAKING'
+
+            self.speaker.change_voice(os.path.join(directory, filename))
+            played = self.speaker.play() # Нужно для того чтобы отметить когда закончилось воспроизведение
+            print(played)
+            self.CURRENT_STATE = previous_state
+
+        elif(speaker == 'News'):
+            print(f'Запрос на синтез речи: {text}')
+            tts = gTTS(text)
+
+            directory = settings.TEMP_VOICE_DIR
+            filename = f'temp{len(os.listdir(directory)) + 1}.mp3'
+            tts.save(os.path.join(directory, filename))
+            print('Успешно синтезирована речь')
+
+            self.PREVIOUS_STATE = previous_state
+            self.CURRENT_STATE = 'PLAYING_NEWS'
+
+            self.speaker.change_voice(os.path.join(directory, filename))
+            self.speaker.play_news()
 
     def contains(self, text, variants):
         """
@@ -86,6 +143,12 @@ class Assistant:
                 status = True
 
         return status
+
+    def get_city_name(self, city, variants):
+        for el in variants:
+            if(el in city):
+                city = city.replace(el, "")
+        return city
 
 
 helper = Assistant()
