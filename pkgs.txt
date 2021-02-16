@@ -1,3 +1,4 @@
 sudo apt-get install vlc
 sudo apt-get install portaudio19-dev
 sudo apt install flac
+sudo apt install python-gi

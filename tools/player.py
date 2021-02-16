@@ -1,5 +1,7 @@
 import vlc
 import time
+import threading
+
 
 class Player:
     def __init__(self, path: str):
@@ -10,9 +12,7 @@ class Player:
         played = False
         self.speaker.play()
         time.sleep(1.5)
-        time.sleep(self.speaker.get_length()/1000)
-        played = True
-        return played
+        return self.speaker.get_length()/1000
 
     def play_news(self):
         self.speaker.play()
@@ -25,3 +25,4 @@ class Player:
 
     def get_len(self):
         return self.speaker.get_duration()
+

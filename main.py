@@ -4,6 +4,8 @@ from playsound import playsound
 from tools import player
 from tools.functions import current_time, current_date, day_of_the_week, get_description_weather, get_temperature, get_news
 import os
+import time
+from threading import Thread
 import settings
 
 
@@ -59,11 +61,24 @@ class Assistant:
                             self.speaker.stop()
                             self.PREVIOUS_STATE = 'SPEAKING'
                             self.CURRENT_STATE = 'IDLE'
+                            print('Cменилось состояние с SPEAKING на IDLE')
+                        if (self.CURRENT_STATE == 'PLAYING_NEWS'):
+                            self.speaker.stop()
+                            self.PREVIOUS_STATE = 'PLAYING_NEWS'
+                            self.CURRENT_STATE = 'IDLE'
+                            print('Cменилось состояние с PLAYING_NEWS на IDLE')
+
                     if (self.contains(statement, self.CONTINUE_PHRASES)):
                         if (self.PREVIOUS_STATE == 'SPEAKING'):
                             self.speaker.play()
                             self.CURRENT_STATE = 'SPEAKING'
                             self.PREVIOUS_STATE = 'IDLE'
+                            print('Cменилось состояние с IDLE на SPEAKING')
+                        if (self.PREVIOUS_STATE == 'PLAYING_NEWS'):
+                            self.speaker.play()
+                            self.CURRENT_STATE = 'PLAYING_NEWS'
+                            self.PREVIOUS_STATE = 'IDLE'
+                            print('Cменилось состояние с IDLE на PLAYING_NEWS')
 
                     if(self.CURRENT_STATE == 'IDLE'):
                         if (self.contains(statement, self.TIME_VARIANTS)):
@@ -84,6 +99,38 @@ class Assistant:
                             news = "".join(news[:10])
                             self.say(text=news, previous_state='IDLE', speaker='News')
                             break
+                        if (self.contains(statement, self.TIMER_VARIANTS)):
+                            for item in self.TIMER_VARIANTS:
+                                if(item in statement):
+                                    statement = statement.replace(item, "")
+
+                            if ('minute' in statement):
+                                statement = statement.replace('minutes', "")
+                                statement = statement.replace('minute', "")
+                                delay = int(statement) * 60
+
+                            if ('second' in statement):
+                                statement = statement.replace('seconds', "")
+                                statement = statement.replace('second', "")
+                                delay = int(statement)
+
+                            if ('hour' in statement):
+                                statement = statement.replace('hours', "")
+                                statement = statement.replace('hour', "")
+                                delay = int(statement) * 3600
+
+                            print(f'Таймер на {delay} секунд')
+
+                            self.timer_thread = Thread(target=self.timer, args=[delay])
+                            self.timer_thread.start()
+
+                            self.say(text='Started timer', previous_state='IDLE')
+                            break
+
+                    if (self.contains(statement, self.CANCEL_TIMER_VARIANTS)):
+                        self.timer_thread.kill()
+                        print('поток вроде сдох')
+                        break
 
                     break
                 except sr.UnknownValueError:  # Не смог распознать
@@ -112,8 +159,8 @@ class Assistant:
 
             self.speaker.change_voice(os.path.join(directory, filename))
             played = self.speaker.play() # Нужно для того чтобы отметить когда закончилось воспроизведение
-            print(played)
-            self.CURRENT_STATE = previous_state
+            thread = Thread(target=self.change_state, args=[self.PREVIOUS_STATE, played])
+            thread.start()
 
         elif(speaker == 'News'):
             print(f'Запрос на синтез речи: {text}')
@@ -128,7 +175,9 @@ class Assistant:
             self.CURRENT_STATE = 'PLAYING_NEWS'
 
             self.speaker.change_voice(os.path.join(directory, filename))
-            self.speaker.play_news()
+            played = self.speaker.play()  # Нужно для того чтобы отметить когда закончилось воспроизведение
+            thread = Thread(target=self.change_state, args=[self.PREVIOUS_STATE, played])
+            thread.start()
 
     def contains(self, text, variants):
         """
@@ -149,6 +198,23 @@ class Assistant:
             if(el in city):
                 city = city.replace(el, "")
         return city
+
+    def change_state(self, prev, delay):
+        """
+        Функция которая меняет состояние бота после синтеза речи
+        :param prev: Состояние, которое будет поставлено
+        :param delay: Таймер, после которго будет изменено состояние (в миллисекундах)
+        :return: none
+        """
+        time.sleep(delay)
+        self.CURRENT_STATE = prev
+        print('Состояние сменилось на ', prev)
+
+    def timer(self, delay):
+        print(f'Начат таймер на {delay} секунд')
+        time.sleep(delay)
+        self.speaker.change_voice(f'{settings.TEMPLATES_DIR}/alarm.mp3')
+        self.speaker.play()
 
 
 helper = Assistant()
