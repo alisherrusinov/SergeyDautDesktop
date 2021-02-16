@@ -3,7 +3,7 @@ from gtts import gTTS
 from playsound import playsound
 from tools import player
 from tools.functions import current_time, current_date, day_of_the_week, get_description_weather, get_temperature, \
-    get_news
+    get_news, get_youtube_music
 import os
 import time
 from threading import Thread
@@ -73,6 +73,7 @@ class Assistant:
                             self.PREVIOUS_STATE = 'PLAYING_NEWS'
                             self.CURRENT_STATE = 'IDLE'
                             print('Cменилось состояние с PLAYING_NEWS на IDLE')
+
 
                     if (self.contains(statement, self.CONTINUE_PHRASES)):
                         if (self.PREVIOUS_STATE == 'SPEAKING'):
@@ -165,6 +166,16 @@ class Assistant:
                     if (self.contains(statement, self.CANCEL_TIMER_VARIANTS)):
                         self.timer_thread.kill()
                         print('поток вроде сдох')
+                        break
+
+                    if (self.contains(statement, self.MUSIC_PLAY_VARIANTS)):
+                        statement = statement.replace('play ', "")
+                        song = get_youtube_music(statement, settings.MUSIC_DIR)
+                        self.speaker.change_voice(song)
+                        time.sleep(1.5)
+                        self.speaker.play()
+                        self.CURRENT_STATE = 'SPEAKING'
+                        self.PREVIOUS_STATE = 'IDLE'
                         break
 
                     break
