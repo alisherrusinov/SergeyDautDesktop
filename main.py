@@ -115,6 +115,10 @@ class Assistant:
                             city = self.get_city_name(statement, self.WEATHER_TEMPERATURE_VARIANTS)
                             self.say(text=get_temperature(city), previous_state='IDLE')
                             break
+                        if (self.contains(statement, self.WEATHER_VARIANTS)):
+                            city = self.get_city_name(statement, self.WEATHER_VARIANTS)
+                            self.say(text=get_description_weather(city), previous_state='IDLE')
+                            break
                         if (self.contains(statement, self.NEWS_VARIANTS)):
                             news, urls = get_news()
                             news = "".join(news[:10])
