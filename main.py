@@ -32,10 +32,9 @@ class Assistant:
         self.NEWS_VARIANTS = ["what's going on in the world", 'show me the latest news', 'read the news for me',
                               'what do they write about in newspapers', "what's in the newspapers",
                               "what's been in the newspapers", "news"]
-        self.TIMER_VARIANTS = ['set timer for', ]
+        self.TIMER_VARIANTS = ['set timer for', 'set alarm for']
         self.CHANGE_TIMER_VARIANTS = ['change timer time to']
         self.CANCEL_TIMER_VARIANTS = ['remove timer', 'cancel timer', 'delete timer']
-        self.ALARM_VARIANTS = ['set alarm for', 'set  alarm at']
         self.NOTIFICATION_ADDING_VARIANTS = ['new notification', 'add new notification', 'notification',
                                              'add new reminder']
         self.MUSIC_PLAY_VARIANTS = ['play ']
