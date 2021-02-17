@@ -198,7 +198,16 @@ class Assistant:
                             self.say(text='tell me what should I remind', previous_state='ADDING_NOTIFICATION')
                             self.CURRENT_STATE = 'ADDING_NOTIFICATION'
                             continue
-
+                        if (self.contains(statement, self.EXIT_EBAY_VARIANTS)):
+                            self.say("I'm not on ebay")
+                            break
+                        if (self.contains(statement, self.SHOW_BASKET_VARIANTS)):
+                            self.write_basket()
+                            answer = ""
+                            for el in self.shopping_cart_names:
+                                answer += f"{el}. "
+                            self.say(answer, previous_state='IDLE')
+                            break
                         if (self.contains(statement, self.EBAY_SEARCHING_VARIANTS)):
                             statement = statement.replace('find me', '')
                             statement = statement.replace('on ebay', '')
