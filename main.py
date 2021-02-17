@@ -45,6 +45,7 @@ class Assistant:
         self.DESCRIPTION_VARIANTS = ['description', 'read the description']
         self.ADDING_TO_BASKET_VARIANTS = ['add to basket']
         self.SHOW_BASKET_VARIANTS = ['show my shopping cart', 'my shopping cart', 'show my basket']
+        self.CLEAR_BASKET_VARIANTS = ['clear my basket', 'clear my shopping cart']
 
         self.CURRENT_STATE = 'IDLE'
         self.PREVIOUS_STATE = ''
@@ -98,6 +99,43 @@ class Assistant:
                             else:
                                 self.current_product -= 1
                                 self.say(text=self.products[self.current_product], previous_state='SEARCHING_PRODUCTS')
+
+
+                    if (self.CURRENT_STATE == 'ADDING_NOTIFICATION'): # Вот это и следующее условие нужно поместить вне активационной фразы т.к. предполагается что просто фраза идет
+
+                        self.notification_label = statement
+
+                        self.say(text='tell me when should i remind', previous_state='ADDING_DATE_NOTIFICATION')
+
+                        self.CURRENT_STATE = 'ADDING_DATE_NOTIFICATION'
+
+                        continue
+
+                    if (self.CURRENT_STATE == 'ADDING_DATE_NOTIFICATION'):
+                        delta = get_seconds_from_date(statement)
+                        if (not delta):
+                            self.say("I didn't recognised date. Please repeat",
+                                     previous_state='ADDING_DATE_NOTIFICATION')
+                            break
+                        print(delta)
+                        print(self.notification_label)
+
+                        print(f'Запрос на синтез речи: {self.notification_label}')
+                        tts = gTTS(self.notification_label)
+
+                        directory = settings.TEMP_VOICE_DIR
+                        filename = f'temp{len(os.listdir(directory)) + 1}.mp3'
+                        filename = os.path.join(directory, filename)
+                        tts.save(filename)
+                        print('Успешно синтезирована речь')
+
+                        self.reminder_thread = multiprocessing.Process(target=self.timer, args=[delta, filename])
+                        self.reminder_thread.start()
+
+                        self.CURRENT_STATE = 'IDLE'
+
+                        continue
+
 
                     if (self.contains(statement, self.ACTIVATION_PHASES)):
                         statement = statement.replace('assistant', '')
@@ -249,6 +287,10 @@ class Assistant:
                                     answer += f"{el}. "
                                 self.say(answer, previous_state='IDLE')
                                 break
+                            if (self.contains(statement, self.CLEAR_BASKET_VARIANTS)):
+                                self.clear_basket()
+                                self.say('Cleared the basket', previous_state='IDLE')
+                                break
                             if (self.contains(statement, self.EBAY_SEARCHING_VARIANTS)):
                                 statement = statement.replace('find me', '')
                                 statement = statement.replace('on ebay', '')
@@ -262,37 +304,6 @@ class Assistant:
                                 self.say(text=self.products[self.current_product], previous_state='SEARCHING_PRODUCTS')
                                 break
 
-
-                        elif (self.CURRENT_STATE == 'ADDING_NOTIFICATION'):
-
-                            notification_label = statement
-
-                            self.say(text='tell me when should i remind', previous_state='ADDING_DATE_NOTIFICATION')
-
-                            self.CURRENT_STATE = 'ADDING_DATE_NOTIFICATION'
-
-                            continue
-
-                        elif (self.CURRENT_STATE == 'ADDING_DATE_NOTIFICATION'):
-                            delta = get_seconds_from_date(statement)
-                            print(delta)
-                            print(notification_label)
-
-                            print(f'Запрос на синтез речи: {notification_label}')
-                            tts = gTTS(notification_label)
-
-                            directory = settings.TEMP_VOICE_DIR
-                            filename = f'temp{len(os.listdir(directory)) + 1}.mp3'
-                            filename = os.path.join(directory, filename)
-                            tts.save(filename)
-                            print('Успешно синтезирована речь')
-
-                            self.reminder_thread = multiprocessing.Process(target=self.timer, args=[delta, filename])
-                            self.reminder_thread.start()
-
-                            self.CURRENT_STATE = 'IDLE'
-
-                            continue
 
                         elif (self.CURRENT_STATE == 'SEARCHING_PRODUCTS'):
                             if (self.contains(statement, self.EXIT_EBAY_VARIANTS)):
@@ -425,6 +436,13 @@ class Assistant:
         names = file.read().split('\n')
         file.close()
         return products, names
+    def clear_basket(self):
+        self.SHOPPING_CART = []
+        self.shopping_cart_names = []
+        file = open('shoppingcart.txt', 'w')
+        file.close()
+        file = open('shoppingcartnames.txt', 'w')
+        file.close()
 
 
 helper = Assistant()

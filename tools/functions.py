@@ -168,7 +168,10 @@ def get_youtube_music(query: str, music_directory):
 
 
 def get_seconds_from_date(date: str):
-    future = timestring.Date(date).date
+    try:
+        future = timestring.Date(date).date
+    except timestring.TimestringInvalid:
+        return False
     print(future)
     delta = future - datetime.datetime.now()
     return delta.days * 86400 + delta.seconds
