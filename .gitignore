@@ -4,7 +4,8 @@
 /sandbox
 # Vagrant
 .vagrant/
-
+/shoppingcart.txt
+/shoppingcartnames.txt
 # Mac/OSX
 .DS_Store
 
