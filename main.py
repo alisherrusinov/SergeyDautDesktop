@@ -100,180 +100,222 @@ class Assistant:
                                 self.current_product -= 1
                                 self.say(text=self.products[self.current_product], previous_state='SEARCHING_PRODUCTS')
 
-                    if (self.CURRENT_STATE == 'IDLE'):
-                        if (self.contains(statement, self.TIME_VARIANTS)):
-                            self.say(text=current_time(), previous_state='IDLE')
-                            break
-                        if (self.contains(statement, self.DAY_OF_THE_WEEK_VARIANTS)):
-                            self.say(text=day_of_the_week(), previous_state='IDLE')
-                            break
-                        if (self.contains(statement, self.DATE_VARIANTS)):
-                            self.say(text=current_date(), previous_state='IDLE')
-                            break
-                        if (self.contains(statement, self.WEATHER_TEMPERATURE_VARIANTS)):
-                            city = self.get_city_name(statement, self.WEATHER_TEMPERATURE_VARIANTS)
-                            self.say(text=get_temperature(city), previous_state='IDLE')
-                            break
-                        if (self.contains(statement, self.WEATHER_VARIANTS)):
-                            city = self.get_city_name(statement, self.WEATHER_VARIANTS)
-                            self.say(text=get_description_weather(city), previous_state='IDLE')
-                            break
-                        if (self.contains(statement, self.NEWS_VARIANTS)):
-                            news, urls = get_news()
-                            news = "".join(news[:10])
-                            self.say(text=news, previous_state='IDLE', speaker='News')
-                            break
-                        if (self.contains(statement, self.TIMER_VARIANTS)):
-                            for item in self.TIMER_VARIANTS:
-                                if (item in statement):
-                                    statement = statement.replace(item, "")
+                    if (self.contains(statement, self.ACTIVATION_PHASES)):
+                        statement = statement.replace('assistant', '')
+                        statement = statement.replace('a system', '')
+                        statement = statement.replace('system', '')
 
-                            if ('minute' in statement):
-                                statement = statement.replace('minutes', "")
-                                statement = statement.replace('minute', "")
-                                delay = int(statement) * 60
+                        if (self.contains(statement, self.STOP_PHRASES)):  # Продолжить речь
+                            if (self.CURRENT_STATE == 'SPEAKING'):
+                                self.speaker.stop()
+                                self.PREVIOUS_STATE = 'SPEAKING'
+                                self.CURRENT_STATE = 'IDLE'
+                                print('Cменилось состояние с SPEAKING на IDLE')
+                            if (self.CURRENT_STATE == 'PLAYING_NEWS'):
+                                self.speaker.stop()
+                                self.PREVIOUS_STATE = 'PLAYING_NEWS'
+                                self.CURRENT_STATE = 'IDLE'
+                                print('Cменилось состояние с PLAYING_NEWS на IDLE')
 
-                            if ('second' in statement):
-                                statement = statement.replace('seconds', "")
-                                statement = statement.replace('second', "")
-                                delay = int(statement)
+                        if (self.contains(statement, self.CONTINUE_PHRASES)):
+                            if (self.PREVIOUS_STATE == 'SPEAKING'):
+                                self.speaker.play()
+                                self.CURRENT_STATE = 'SPEAKING'
+                                self.PREVIOUS_STATE = 'IDLE'
+                                print('Cменилось состояние с IDLE на SPEAKING')
+                            if (self.PREVIOUS_STATE == 'PLAYING_NEWS'):
+                                self.speaker.play()
+                                self.CURRENT_STATE = 'PLAYING_NEWS'
+                                self.PREVIOUS_STATE = 'IDLE'
+                                print('Cменилось состояние с IDLE на PLAYING_NEWS')
 
-                            if ('hour' in statement):
-                                statement = statement.replace('hours', "")
-                                statement = statement.replace('hour', "")
-                                delay = int(statement) * 3600
+                        if (self.contains(statement, self.NEXT_PRODUCT_VARIANTS)):
+                            if (self.CURRENT_STATE == 'SEARCHING_PRODUCTS'):
+                                self.current_product += 1
+                                self.say(text=self.products[self.current_product], previous_state='SEARCHING_PRODUCTS')
+                        if (self.contains(statement, self.PREV_PRODUCT_VARIANTS)):
+                            if (self.CURRENT_STATE == 'SEARCHING_PRODUCTS'):
+                                if (self.current_product == 0):
+                                    self.say(text='it is the first product', previous_state='SEARCHING_PRODUCTS')
+                                else:
+                                    self.current_product -= 1
+                                    self.say(text=self.products[self.current_product],
+                                             previous_state='SEARCHING_PRODUCTS')
 
-                            print(f'Таймер на {delay} секунд')
+                        if (self.CURRENT_STATE == 'IDLE'):
+                            if (self.contains(statement, self.TIME_VARIANTS)):
+                                self.say(text=current_time(), previous_state='IDLE')
+                                break
+                            if (self.contains(statement, self.DAY_OF_THE_WEEK_VARIANTS)):
+                                self.say(text=day_of_the_week(), previous_state='IDLE')
+                                break
+                            if (self.contains(statement, self.DATE_VARIANTS)):
+                                self.say(text=current_date(), previous_state='IDLE')
+                                break
+                            if (self.contains(statement, self.WEATHER_TEMPERATURE_VARIANTS)):
+                                city = self.get_city_name(statement, self.WEATHER_TEMPERATURE_VARIANTS)
+                                self.say(text=get_temperature(city), previous_state='IDLE')
+                                break
+                            if (self.contains(statement, self.WEATHER_VARIANTS)):
+                                city = self.get_city_name(statement, self.WEATHER_VARIANTS)
+                                self.say(text=get_description_weather(city), previous_state='IDLE')
+                                break
+                            if (self.contains(statement, self.NEWS_VARIANTS)):
+                                news, urls = get_news()
+                                news = "".join(news[:10])
+                                self.say(text=news, previous_state='IDLE', speaker='News')
+                                break
+                            if (self.contains(statement, self.TIMER_VARIANTS)):
+                                for item in self.TIMER_VARIANTS:
+                                    if (item in statement):
+                                        statement = statement.replace(item, "")
 
-                            self.timer_thread = multiprocessing.Process(target=self.timer, args=[delay])
-                            self.timer_thread.start()
+                                if ('minute' in statement):
+                                    statement = statement.replace('minutes', "")
+                                    statement = statement.replace('minute', "")
+                                    delay = int(statement) * 60
 
-                            self.say(text='Started timer', previous_state='IDLE')
-                            break
-                        if (self.contains(statement, self.CHANGE_TIMER_VARIANTS)):
-                            for item in self.CHANGE_TIMER_VARIANTS:
-                                if (item in statement):
-                                    statement = statement.replace(item, "")
+                                if ('second' in statement):
+                                    statement = statement.replace('seconds', "")
+                                    statement = statement.replace('second', "")
+                                    delay = int(statement)
 
-                            if ('minute' in statement):
-                                statement = statement.replace('minutes', "")
-                                statement = statement.replace('minute', "")
-                                delay = int(statement) * 60
+                                if ('hour' in statement):
+                                    statement = statement.replace('hours', "")
+                                    statement = statement.replace('hour', "")
+                                    delay = int(statement) * 3600
 
-                            if ('second' in statement):
-                                statement = statement.replace('seconds', "")
-                                statement = statement.replace('second', "")
-                                delay = int(statement)
+                                print(f'Таймер на {delay} секунд')
 
-                            if ('hour' in statement):
-                                statement = statement.replace('hours', "")
-                                statement = statement.replace('hour', "")
-                                delay = int(statement) * 3600
+                                self.timer_thread = multiprocessing.Process(target=self.timer, args=[delay])
+                                self.timer_thread.start()
 
-                            print(f'Изменен таймер на {delay} секунд')
+                                self.say(text='Started timer', previous_state='IDLE')
+                                break
+                            if (self.contains(statement, self.CHANGE_TIMER_VARIANTS)):
+                                for item in self.CHANGE_TIMER_VARIANTS:
+                                    if (item in statement):
+                                        statement = statement.replace(item, "")
 
-                            self.timer_thread.kill()
-                            self.timer_thread = multiprocessing.Process(target=self.timer, args=[delay])
-                            self.timer_thread.start()
+                                if ('minute' in statement):
+                                    statement = statement.replace('minutes', "")
+                                    statement = statement.replace('minute', "")
+                                    delay = int(statement) * 60
 
-                            self.say(text='Started timer', previous_state='IDLE')
-                            break
+                                if ('second' in statement):
+                                    statement = statement.replace('seconds', "")
+                                    statement = statement.replace('second', "")
+                                    delay = int(statement)
 
-                        if (self.contains(statement, self.CANCEL_TIMER_VARIANTS)):
-                            self.timer_thread.kill()
-                            print('поток вроде сдох')
-                            break
+                                if ('hour' in statement):
+                                    statement = statement.replace('hours', "")
+                                    statement = statement.replace('hour', "")
+                                    delay = int(statement) * 3600
 
-                        if (self.contains(statement, self.MUSIC_PLAY_VARIANTS)):
-                            statement = statement.replace('play ', "")
-                            song = get_youtube_music(statement, settings.MUSIC_DIR)
-                            self.speaker.change_voice(song)
-                            time.sleep(1.5)
-                            self.speaker.play()
-                            self.CURRENT_STATE = 'SPEAKING'
-                            self.PREVIOUS_STATE = 'IDLE'
-                            break
+                                print(f'Изменен таймер на {delay} секунд')
 
-                        if (self.contains(statement, self.NOTIFICATION_ADDING_VARIANTS)):
-                            self.say(text='tell me what should I remind', previous_state='ADDING_NOTIFICATION')
-                            self.CURRENT_STATE = 'ADDING_NOTIFICATION'
+                                self.timer_thread.kill()
+                                self.timer_thread = multiprocessing.Process(target=self.timer, args=[delay])
+                                self.timer_thread.start()
+
+                                self.say(text='Started timer', previous_state='IDLE')
+                                break
+
+                            if (self.contains(statement, self.CANCEL_TIMER_VARIANTS)):
+                                self.timer_thread.kill()
+                                print('поток вроде сдох')
+                                break
+
+                            if (self.contains(statement, self.MUSIC_PLAY_VARIANTS)):
+                                statement = statement.replace('play ', "")
+                                song = get_youtube_music(statement, settings.MUSIC_DIR)
+                                self.speaker.change_voice(song)
+                                time.sleep(1.5)
+                                self.speaker.play()
+                                self.CURRENT_STATE = 'SPEAKING'
+                                self.PREVIOUS_STATE = 'IDLE'
+                                break
+
+                            if (self.contains(statement, self.NOTIFICATION_ADDING_VARIANTS)):
+                                self.say(text='tell me what should I remind', previous_state='ADDING_NOTIFICATION')
+                                self.CURRENT_STATE = 'ADDING_NOTIFICATION'
+                                continue
+                            if (self.contains(statement, self.EXIT_EBAY_VARIANTS)):
+                                self.say("I'm not on ebay")
+                                break
+                            if (self.contains(statement, self.SHOW_BASKET_VARIANTS)):
+                                self.write_basket()
+                                answer = ""
+                                for el in self.shopping_cart_names:
+                                    answer += f"{el}. "
+                                self.say(answer, previous_state='IDLE')
+                                break
+                            if (self.contains(statement, self.EBAY_SEARCHING_VARIANTS)):
+                                statement = statement.replace('find me', '')
+                                statement = statement.replace('on ebay', '')
+                                statement = statement.replace('ebay', '')
+                                print(statement)
+
+                                self.products, self.products_urls, self.products_prices = search_ebay(statement)
+                                self.current_product = 0
+
+                                self.CURRENT_STATE = 'SEARCHING_PRODUCTS'
+                                self.say(text=self.products[self.current_product], previous_state='SEARCHING_PRODUCTS')
+                                break
+
+
+                        elif (self.CURRENT_STATE == 'ADDING_NOTIFICATION'):
+
+                            notification_label = statement
+
+                            self.say(text='tell me when should i remind', previous_state='ADDING_DATE_NOTIFICATION')
+
+                            self.CURRENT_STATE = 'ADDING_DATE_NOTIFICATION'
+
                             continue
-                        if (self.contains(statement, self.EXIT_EBAY_VARIANTS)):
-                            self.say("I'm not on ebay")
-                            break
-                        if (self.contains(statement, self.SHOW_BASKET_VARIANTS)):
-                            self.write_basket()
-                            answer = ""
-                            for el in self.shopping_cart_names:
-                                answer += f"{el}. "
-                            self.say(answer, previous_state='IDLE')
-                            break
-                        if (self.contains(statement, self.EBAY_SEARCHING_VARIANTS)):
-                            statement = statement.replace('find me', '')
-                            statement = statement.replace('on ebay', '')
-                            statement = statement.replace('ebay', '')
-                            print(statement)
 
-                            self.products, self.products_urls, self.products_prices = search_ebay(statement)
-                            self.current_product = 0
+                        elif (self.CURRENT_STATE == 'ADDING_DATE_NOTIFICATION'):
+                            delta = get_seconds_from_date(statement)
+                            print(delta)
+                            print(notification_label)
 
-                            self.CURRENT_STATE = 'SEARCHING_PRODUCTS'
-                            self.say(text=self.products[self.current_product], previous_state='SEARCHING_PRODUCTS')
-                            break
+                            print(f'Запрос на синтез речи: {notification_label}')
+                            tts = gTTS(notification_label)
 
+                            directory = settings.TEMP_VOICE_DIR
+                            filename = f'temp{len(os.listdir(directory)) + 1}.mp3'
+                            filename = os.path.join(directory, filename)
+                            tts.save(filename)
+                            print('Успешно синтезирована речь')
 
-                    elif (self.CURRENT_STATE == 'ADDING_NOTIFICATION'):
+                            self.reminder_thread = multiprocessing.Process(target=self.timer, args=[delta, filename])
+                            self.reminder_thread.start()
 
-                        notification_label = statement
-
-                        self.say(text='tell me when should i remind', previous_state='ADDING_DATE_NOTIFICATION')
-
-                        self.CURRENT_STATE = 'ADDING_DATE_NOTIFICATION'
-
-                        continue
-
-                    elif (self.CURRENT_STATE == 'ADDING_DATE_NOTIFICATION'):
-                        delta = get_seconds_from_date(statement)
-                        print(delta)
-                        print(notification_label)
-
-                        print(f'Запрос на синтез речи: {notification_label}')
-                        tts = gTTS(notification_label)
-
-                        directory = settings.TEMP_VOICE_DIR
-                        filename = f'temp{len(os.listdir(directory)) + 1}.mp3'
-                        filename = os.path.join(directory, filename)
-                        tts.save(filename)
-                        print('Успешно синтезирована речь')
-
-                        self.reminder_thread = multiprocessing.Process(target=self.timer, args=[delta, filename])
-                        self.reminder_thread.start()
-
-                        self.CURRENT_STATE = 'IDLE'
-
-                        continue
-
-                    elif (self.CURRENT_STATE == 'SEARCHING_PRODUCTS'):
-                        if (self.contains(statement, self.EXIT_EBAY_VARIANTS)):
                             self.CURRENT_STATE = 'IDLE'
-                            self.say('ok', previous_state='IDLE')
-                            break
-                        if (self.contains(statement, self.DESCRIPTION_VARIANTS)):
-                            decsription = get_description_ebay(self.products_urls[self.current_product])
-                            self.say(decsription, previous_state='SEARCHING_PRODUCTS')
-                            break
-                        if (self.contains(statement, self.ADDING_TO_BASKET_VARIANTS)):
-                            self.SHOPPING_CART.append(self.products_urls[self.current_product])
-                            self.shopping_cart_names.append(self.products[self.current_product])
-                            self.say('Added', previous_state='SEARCHING_PRODUCTS')
-                            break
-                        if (self.contains(statement, self.SHOW_BASKET_VARIANTS)):
-                            self.write_basket()
-                            answer = ""
-                            for el in self.shopping_cart_names:
-                                answer += f"{el}. "
-                            self.say(answer, previous_state='SEARCHING_PRODUCTS')
-                            break
+
+                            continue
+
+                        elif (self.CURRENT_STATE == 'SEARCHING_PRODUCTS'):
+                            if (self.contains(statement, self.EXIT_EBAY_VARIANTS)):
+                                self.CURRENT_STATE = 'IDLE'
+                                self.say('ok', previous_state='IDLE')
+                                break
+                            if (self.contains(statement, self.DESCRIPTION_VARIANTS)):
+                                decsription = get_description_ebay(self.products_urls[self.current_product])
+                                self.say(decsription, previous_state='SEARCHING_PRODUCTS')
+                                break
+                            if (self.contains(statement, self.ADDING_TO_BASKET_VARIANTS)):
+                                self.SHOPPING_CART.append(self.products_urls[self.current_product])
+                                self.shopping_cart_names.append(self.products[self.current_product])
+                                self.say('Added', previous_state='SEARCHING_PRODUCTS')
+                                break
+                            if (self.contains(statement, self.SHOW_BASKET_VARIANTS)):
+                                self.write_basket()
+                                answer = ""
+                                for el in self.shopping_cart_names:
+                                    answer += f"{el}. "
+                                self.say(answer, previous_state='SEARCHING_PRODUCTS')
+                                break
 
                     break
                 except sr.UnknownValueError:  # Не смог распознать
