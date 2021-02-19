@@ -9,7 +9,8 @@ import time
 from threading import Thread
 import multiprocessing
 import settings
-
+import logging
+logging.basicConfig(filename="Log.log", level=logging.INFO)
 
 class Assistant:
     def __init__(self):
@@ -69,24 +70,24 @@ class Assistant:
                             self.speaker.stop()
                             self.PREVIOUS_STATE = 'SPEAKING'
                             self.CURRENT_STATE = 'IDLE'
-                            print('Cменилось состояние с SPEAKING на IDLE')
+                            #print('Cменилось состояние с SPEAKING на IDLE')
                         if (self.CURRENT_STATE == 'PLAYING_NEWS'):
                             self.speaker.stop()
                             self.PREVIOUS_STATE = 'PLAYING_NEWS'
                             self.CURRENT_STATE = 'IDLE'
-                            print('Cменилось состояние с PLAYING_NEWS на IDLE')
+                            #print('Cменилось состояние с PLAYING_NEWS на IDLE')
 
                     if (self.contains(statement, self.CONTINUE_PHRASES)):
                         if (self.PREVIOUS_STATE == 'SPEAKING'):
                             self.speaker.play()
                             self.CURRENT_STATE = 'SPEAKING'
                             self.PREVIOUS_STATE = 'IDLE'
-                            print('Cменилось состояние с IDLE на SPEAKING')
+                            #print('Cменилось состояние с IDLE на SPEAKING')
                         if (self.PREVIOUS_STATE == 'PLAYING_NEWS'):
                             self.speaker.play()
                             self.CURRENT_STATE = 'PLAYING_NEWS'
                             self.PREVIOUS_STATE = 'IDLE'
-                            print('Cменилось состояние с IDLE на PLAYING_NEWS')
+                            #print('Cменилось состояние с IDLE на PLAYING_NEWS')
 
                     if (self.contains(statement, self.NEXT_PRODUCT_VARIANTS)):
                         if (self.CURRENT_STATE == 'SEARCHING_PRODUCTS'):
@@ -95,7 +96,7 @@ class Assistant:
                     if (self.contains(statement, self.PREV_PRODUCT_VARIANTS)):
                         if (self.CURRENT_STATE == 'SEARCHING_PRODUCTS'):
                             if (self.current_product == 0):
-                                self.say(text='it is the first product', previous_state='SEARCHING_PRODUCTS')
+                                self.say_template('first_product', previous='SEARCHING_PRODUCTS')
                             else:
                                 self.current_product -= 1
                                 self.say(text=self.products[self.current_product], previous_state='SEARCHING_PRODUCTS')
@@ -117,17 +118,17 @@ class Assistant:
                             self.say("I didn't recognised date. Please repeat",
                                      previous_state='ADDING_DATE_NOTIFICATION')
                             break
-                        print(delta)
-                        print(self.notification_label)
+                        #print(delta)
+                        #print(self.notification_label)
 
-                        print(f'Запрос на синтез речи: {self.notification_label}')
+                        #print(f'Запрос на синтез речи: {self.notification_label}')
                         tts = gTTS(self.notification_label)
 
                         directory = settings.TEMP_VOICE_DIR
                         filename = f'temp{len(os.listdir(directory)) + 1}.mp3'
                         filename = os.path.join(directory, filename)
                         tts.save(filename)
-                        print('Успешно синтезирована речь')
+                        #print('Успешно синтезирована речь')
 
                         self.reminder_thread = multiprocessing.Process(target=self.timer, args=[delta, filename])
                         self.reminder_thread.start()
@@ -147,24 +148,24 @@ class Assistant:
                                 self.speaker.stop()
                                 self.PREVIOUS_STATE = 'SPEAKING'
                                 self.CURRENT_STATE = 'IDLE'
-                                print('Cменилось состояние с SPEAKING на IDLE')
+                                #print('Cменилось состояние с SPEAKING на IDLE')
                             if (self.CURRENT_STATE == 'PLAYING_NEWS'):
                                 self.speaker.stop()
                                 self.PREVIOUS_STATE = 'PLAYING_NEWS'
                                 self.CURRENT_STATE = 'IDLE'
-                                print('Cменилось состояние с PLAYING_NEWS на IDLE')
+                                #print('Cменилось состояние с PLAYING_NEWS на IDLE')
 
                         if (self.contains(statement, self.CONTINUE_PHRASES)):
                             if (self.PREVIOUS_STATE == 'SPEAKING'):
                                 self.speaker.play()
                                 self.CURRENT_STATE = 'SPEAKING'
                                 self.PREVIOUS_STATE = 'IDLE'
-                                print('Cменилось состояние с IDLE на SPEAKING')
+                                #print('Cменилось состояние с IDLE на SPEAKING')
                             if (self.PREVIOUS_STATE == 'PLAYING_NEWS'):
                                 self.speaker.play()
                                 self.CURRENT_STATE = 'PLAYING_NEWS'
                                 self.PREVIOUS_STATE = 'IDLE'
-                                print('Cменилось состояние с IDLE на PLAYING_NEWS')
+                                #print('Cменилось состояние с IDLE на PLAYING_NEWS')
 
                         if (self.contains(statement, self.NEXT_PRODUCT_VARIANTS)):
                             if (self.CURRENT_STATE == 'SEARCHING_PRODUCTS'):
@@ -173,7 +174,7 @@ class Assistant:
                         if (self.contains(statement, self.PREV_PRODUCT_VARIANTS)):
                             if (self.CURRENT_STATE == 'SEARCHING_PRODUCTS'):
                                 if (self.current_product == 0):
-                                    self.say(text='it is the first product', previous_state='SEARCHING_PRODUCTS')
+                                    self.say_template('first_product', previous='SEARCHING_PRODUCTS')
                                 else:
                                     self.current_product -= 1
                                     self.say(text=self.products[self.current_product],
@@ -222,12 +223,12 @@ class Assistant:
                                     statement = statement.replace('hour', "")
                                     delay = int(statement) * 3600
 
-                                print(f'Таймер на {delay} секунд')
+                                #print(f'Таймер на {delay} секунд')
 
                                 self.timer_thread = multiprocessing.Process(target=self.timer, args=[delay])
                                 self.timer_thread.start()
 
-                                self.say(text='Started timer', previous_state='IDLE')
+                                self.say_template('started_timer', previous='IDLE')
                                 break
                             if (self.contains(statement, self.CHANGE_TIMER_VARIANTS)):
                                 for item in self.CHANGE_TIMER_VARIANTS:
@@ -249,18 +250,18 @@ class Assistant:
                                     statement = statement.replace('hour', "")
                                     delay = int(statement) * 3600
 
-                                print(f'Изменен таймер на {delay} секунд')
+                                #print(f'Изменен таймер на {delay} секунд')
 
                                 self.timer_thread.kill()
                                 self.timer_thread = multiprocessing.Process(target=self.timer, args=[delay])
                                 self.timer_thread.start()
 
-                                self.say(text='Started timer', previous_state='IDLE')
+                                self.say_template('started_timer', previous='IDLE')
                                 break
 
                             if (self.contains(statement, self.CANCEL_TIMER_VARIANTS)):
                                 self.timer_thread.kill()
-                                print('поток вроде сдох')
+                                #print('поток вроде сдох')
                                 break
 
                             if (self.contains(statement, self.MUSIC_PLAY_VARIANTS)):
@@ -274,11 +275,11 @@ class Assistant:
                                 break
 
                             if (self.contains(statement, self.NOTIFICATION_ADDING_VARIANTS)):
-                                self.say(text='tell me what should I remind', previous_state='ADDING_NOTIFICATION')
+                                self.say_template('tell_remind', previous='ADDING_NOTIFICATION')
                                 self.CURRENT_STATE = 'ADDING_NOTIFICATION'
                                 continue
                             if (self.contains(statement, self.EXIT_EBAY_VARIANTS)):
-                                self.say("I'm not on ebay")
+                                self.say_template("not_on_ebay")
                                 break
                             if (self.contains(statement, self.SHOW_BASKET_VARIANTS)):
                                 self.write_basket()
@@ -289,13 +290,13 @@ class Assistant:
                                 break
                             if (self.contains(statement, self.CLEAR_BASKET_VARIANTS)):
                                 self.clear_basket()
-                                self.say('Cleared the basket', previous_state='IDLE')
+                                self.say_template('cleared_basket', previous='IDLE')
                                 break
                             if (self.contains(statement, self.EBAY_SEARCHING_VARIANTS)):
                                 statement = statement.replace('find me', '')
                                 statement = statement.replace('on ebay', '')
                                 statement = statement.replace('ebay', '')
-                                print(statement)
+                                #print(statement)
 
                                 self.products, self.products_urls, self.products_prices = search_ebay(statement)
                                 self.current_product = 0
@@ -308,7 +309,7 @@ class Assistant:
                         elif (self.CURRENT_STATE == 'SEARCHING_PRODUCTS'):
                             if (self.contains(statement, self.EXIT_EBAY_VARIANTS)):
                                 self.CURRENT_STATE = 'IDLE'
-                                self.say('ok', previous_state='IDLE')
+                                self.say_template('ok', previous='IDLE')
                                 break
                             if (self.contains(statement, self.DESCRIPTION_VARIANTS)):
                                 decsription = get_description_ebay(self.products_urls[self.current_product])
@@ -317,7 +318,7 @@ class Assistant:
                             if (self.contains(statement, self.ADDING_TO_BASKET_VARIANTS)):
                                 self.SHOPPING_CART.append(self.products_urls[self.current_product])
                                 self.shopping_cart_names.append(self.products[self.current_product])
-                                self.say('Added', previous_state='SEARCHING_PRODUCTS')
+                                self.say_template('added', previous='SEARCHING_PRODUCTS')
                                 break
                             if (self.contains(statement, self.SHOW_BASKET_VARIANTS)):
                                 self.write_basket()
@@ -332,22 +333,22 @@ class Assistant:
                     pass
                     break
                 except sr.RequestError as e:
-                    print("Не могу получить данные от сервиса Google Speech Recognition; {0}".format(e))
+                    #print("Не могу получить данные от сервиса Google Speech Recognition; {0}".format(e))
                     break
         except KeyboardInterrupt:
-            print("Пока!")
+            #print("Пока!")
             exit()
 
     def say(self, text, speaker='None', previous_state='IDLE'):
         # TODO спикер работает в отдельном потоке так что можно будет сделать стоппинг как в оригинале
         if (speaker == 'None'):
-            print(f'Запрос на синтез речи: {text}')
+            #print(f'Запрос на синтез речи: {text}')
             tts = gTTS(text)
 
             directory = settings.TEMP_VOICE_DIR
             filename = f'temp{len(os.listdir(directory)) + 1}.mp3'
             tts.save(os.path.join(directory, filename))
-            print('Успешно синтезирована речь')
+            #print('Успешно синтезирована речь')
 
             self.PREVIOUS_STATE = previous_state
             self.CURRENT_STATE = 'SPEAKING'
@@ -357,16 +358,15 @@ class Assistant:
             thread = Thread(target=self.change_state,
                             args=[self.PREVIOUS_STATE, played, os.path.join(directory, filename)])
             thread.start()
-            print(thread.ident)
 
         elif (speaker == 'News'):
-            print(f'Запрос на синтез речи: {text}')
+            #print(f'Запрос на синтез речи: {text}')
             tts = gTTS(text)
 
             directory = settings.TEMP_VOICE_DIR
             filename = f'temp{len(os.listdir(directory)) + 1}.mp3'
             tts.save(os.path.join(directory, filename))
-            print('Успешно синтезирована речь')
+            #print('Успешно синтезирована речь')
 
             self.PREVIOUS_STATE = previous_state
             self.CURRENT_STATE = 'PLAYING_NEWS'
@@ -406,17 +406,23 @@ class Assistant:
         """
         time.sleep(delay)
         self.CURRENT_STATE = prev
-        print('Состояние сменилось на ', prev)
+        #print('Состояние сменилось на ', prev)
         os.popen(f'rm {filename}')
 
+
+    def say_template(self, filename, previous='IDLE'):
+        print(f"ffplay -nodisp -autoexit {os.path.join(settings.TEMPLATES_DIR, f'{filename}.mp3')}")
+        os.popen(f"ffplay -nodisp -autoexit {os.path.join(settings.TEMPLATES_DIR, f'{filename}.mp3')}")
+        self.CURRENT_STATE = previous
+
     def timer(self, delay, filename='alarm.mp3'):
-        print(f'Начат таймер на {delay} секунд')
+        #print(f'Начат таймер на {delay} секунд')
         time.sleep(delay)
         if filename == 'alarm.mp3':
             os.popen(f"ffplay -nodisp -autoexit {os.path.join(settings.TEMPLATES_DIR, 'alarm.mp3')}")
         else:
             os.popen(f"ffplay -nodisp -autoexit {filename}")
-        print('таймер закончен')
+        #print('таймер закончен')
 
     def write_basket(self):
         file = open('shoppingcart.txt', 'w')
