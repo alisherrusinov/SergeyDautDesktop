@@ -66,18 +66,18 @@ class Assistant:
                     statement = statement.lower()
                     print(statement)
 
-                    if (self.contains(statement, self.STOP_PHRASES)):  # Продолжить речь
+                    if (self.contains(statement, self.STOP_PHRASES)):  # Прекратить речь
                         if (self.CURRENT_STATE == 'SPEAKING'):
                             self.speaker.stop()
+                            self.CURRENT_STATE = self.PREVIOUS_STATE
                             self.PREVIOUS_STATE = 'SPEAKING'
-                            self.CURRENT_STATE = 'IDLE'
-                            print('Cменилось состояние с SPEAKING на IDLE')
+                            print(f'Cменилось состояние с SPEAKING на {self.CURRENT_STATE}')
                     if (self.contains(statement, self.CONTINUE_PHRASES)):
                         if (self.PREVIOUS_STATE == 'SPEAKING'):
                             self.speaker.play()
+                            self.PREVIOUS_STATE = self.CURRENT_STATE
                             self.CURRENT_STATE = 'SPEAKING'
-                            self.PREVIOUS_STATE = 'IDLE'
-                            print('Cменилось состояние с IDLE на SPEAKING')
+                            print(f'Cменилось состояние с IDLE на SPEAKING')
 
                     if (self.contains(statement, self.NEXT_PRODUCT_VARIANTS)):
                         if (self.CURRENT_STATE == 'SEARCHING_PRODUCTS'):
