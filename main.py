@@ -18,7 +18,7 @@ class Assistant:
 
         self.speaker = player.Player(os.path.join(settings.TEMPLATES_DIR, 'hi1.mp3'))
 
-        self.ACTIVATION_PHASES = ['system', 'assistant']
+        self.ACTIVATION_PHASES = ['system', 'assistant', 'assistance']
         self.STOP_PHRASES = ['stop', 'shut up', 'shut down']
         self.CONTINUE_PHRASES = ['resume', 'Resume', 'continue', 'Continue', 'go on', 'Go on']
 
@@ -52,6 +52,8 @@ class Assistant:
 
         self.SHOPPING_CART, self.shopping_cart_names = self.read_shopping_cart()
 
+        self.change_state_thread = None
+
     def work(self):
         with self._microphone as source:
             self._recognizer.adjust_for_ambient_noise(source)
@@ -70,23 +72,12 @@ class Assistant:
                             self.PREVIOUS_STATE = 'SPEAKING'
                             self.CURRENT_STATE = 'IDLE'
                             print('Cменилось состояние с SPEAKING на IDLE')
-                        if (self.CURRENT_STATE == 'PLAYING_NEWS'):
-                            self.speaker.stop()
-                            self.PREVIOUS_STATE = 'PLAYING_NEWS'
-                            self.CURRENT_STATE = 'IDLE'
-                            print('Cменилось состояние с PLAYING_NEWS на IDLE')
-
                     if (self.contains(statement, self.CONTINUE_PHRASES)):
                         if (self.PREVIOUS_STATE == 'SPEAKING'):
                             self.speaker.play()
                             self.CURRENT_STATE = 'SPEAKING'
                             self.PREVIOUS_STATE = 'IDLE'
                             print('Cменилось состояние с IDLE на SPEAKING')
-                        if (self.PREVIOUS_STATE == 'PLAYING_NEWS'):
-                            self.speaker.play()
-                            self.CURRENT_STATE = 'PLAYING_NEWS'
-                            self.PREVIOUS_STATE = 'IDLE'
-                            print('Cменилось состояние с IDLE на PLAYING_NEWS')
 
                     if (self.contains(statement, self.NEXT_PRODUCT_VARIANTS)):
                         if (self.CURRENT_STATE == 'SEARCHING_PRODUCTS'):
@@ -102,15 +93,10 @@ class Assistant:
 
 
                     if (self.CURRENT_STATE == 'ADDING_NOTIFICATION'): # Вот это и следующее условие нужно поместить вне активационной фразы т.к. предполагается что просто фраза идет
-
                         self.notification_label = statement
-
                         self.say(text='tell me when should i remind', previous_state='ADDING_DATE_NOTIFICATION')
-
                         self.CURRENT_STATE = 'ADDING_DATE_NOTIFICATION'
-
                         continue
-
                     if (self.CURRENT_STATE == 'ADDING_DATE_NOTIFICATION'):
                         delta = get_seconds_from_date(statement)
                         if (not delta):
@@ -122,7 +108,6 @@ class Assistant:
 
                         print(f'Запрос на синтез речи: {self.notification_label}')
                         tts = gTTS(self.notification_label)
-
                         directory = settings.TEMP_VOICE_DIR
                         filename = f'temp{len(os.listdir(directory)) + 1}.mp3'
                         filename = os.path.join(directory, filename)
@@ -131,9 +116,7 @@ class Assistant:
 
                         self.reminder_thread = multiprocessing.Process(target=self.timer, args=[delta, filename])
                         self.reminder_thread.start()
-
                         self.CURRENT_STATE = 'IDLE'
-
                         continue
 
 
@@ -141,43 +124,6 @@ class Assistant:
                         statement = statement.replace('assistant', '')
                         statement = statement.replace('a system', '')
                         statement = statement.replace('system', '')
-
-                        if (self.contains(statement, self.STOP_PHRASES)):  # Продолжить речь
-                            if (self.CURRENT_STATE == 'SPEAKING'):
-                                self.speaker.stop()
-                                self.PREVIOUS_STATE = 'SPEAKING'
-                                self.CURRENT_STATE = 'IDLE'
-                                print('Cменилось состояние с SPEAKING на IDLE')
-                            if (self.CURRENT_STATE == 'PLAYING_NEWS'):
-                                self.speaker.stop()
-                                self.PREVIOUS_STATE = 'PLAYING_NEWS'
-                                self.CURRENT_STATE = 'IDLE'
-                                print('Cменилось состояние с PLAYING_NEWS на IDLE')
-
-                        if (self.contains(statement, self.CONTINUE_PHRASES)):
-                            if (self.PREVIOUS_STATE == 'SPEAKING'):
-                                self.speaker.play()
-                                self.CURRENT_STATE = 'SPEAKING'
-                                self.PREVIOUS_STATE = 'IDLE'
-                                print('Cменилось состояние с IDLE на SPEAKING')
-                            if (self.PREVIOUS_STATE == 'PLAYING_NEWS'):
-                                self.speaker.play()
-                                self.CURRENT_STATE = 'PLAYING_NEWS'
-                                self.PREVIOUS_STATE = 'IDLE'
-                                print('Cменилось состояние с IDLE на PLAYING_NEWS')
-
-                        if (self.contains(statement, self.NEXT_PRODUCT_VARIANTS)):
-                            if (self.CURRENT_STATE == 'SEARCHING_PRODUCTS'):
-                                self.current_product += 1
-                                self.say(text=self.products[self.current_product], previous_state='SEARCHING_PRODUCTS')
-                        if (self.contains(statement, self.PREV_PRODUCT_VARIANTS)):
-                            if (self.CURRENT_STATE == 'SEARCHING_PRODUCTS'):
-                                if (self.current_product == 0):
-                                    self.say(text='it is the first product', previous_state='SEARCHING_PRODUCTS')
-                                else:
-                                    self.current_product -= 1
-                                    self.say(text=self.products[self.current_product],
-                                             previous_state='SEARCHING_PRODUCTS')
 
                         if (self.CURRENT_STATE == 'IDLE'):
                             if (self.contains(statement, self.TIME_VARIANTS)):
@@ -199,8 +145,8 @@ class Assistant:
                                 break
                             if (self.contains(statement, self.NEWS_VARIANTS)):
                                 news, urls = get_news()
-                                news = "".join(news[:10])
-                                self.say(text=news, previous_state='IDLE', speaker='News')
+                                news = "".join(news[:5])
+                                self.say(text=news, previous_state='IDLE')
                                 break
                             if (self.contains(statement, self.TIMER_VARIANTS)):
                                 for item in self.TIMER_VARIANTS:
@@ -260,17 +206,24 @@ class Assistant:
 
                             if (self.contains(statement, self.CANCEL_TIMER_VARIANTS)):
                                 self.timer_thread.kill()
-                                print('поток вроде сдох')
+                                print('Завершен таймер')
+                                self.say('Cancelled timer', previous_state='IDLE')
                                 break
 
                             if (self.contains(statement, self.MUSIC_PLAY_VARIANTS)):
                                 statement = statement.replace('play ', "")
-                                song = get_youtube_music(statement, settings.MUSIC_DIR)
-                                self.speaker.change_voice(song)
-                                time.sleep(1.5)
+                                song = get_youtube_music(statement)
+                                print(song)
+                                self.speaker.change_voice(song, youtube=True)
                                 self.speaker.play()
                                 self.CURRENT_STATE = 'SPEAKING'
                                 self.PREVIOUS_STATE = 'IDLE'
+                                played = self.speaker.play_youtube()  # Нужно для того чтобы отметить когда закончилось воспроизведение
+                                print(played)
+
+                                self.change_state_thread = Thread(target=self.change_state,
+                                                                  args=[self.PREVIOUS_STATE, self.CURRENT_STATE, played])
+                                self.change_state_thread.start()
                                 break
 
                             if (self.contains(statement, self.NOTIFICATION_ADDING_VARIANTS)):
@@ -301,6 +254,7 @@ class Assistant:
                                 self.current_product = 0
 
                                 self.CURRENT_STATE = 'SEARCHING_PRODUCTS'
+                                self.PREVIOUS_STATE = 'IDLE'
                                 self.say(text=self.products[self.current_product], previous_state='SEARCHING_PRODUCTS')
                                 break
 
@@ -354,28 +308,10 @@ class Assistant:
 
             self.speaker.change_voice(os.path.join(directory, filename))
             played = self.speaker.play()  # Нужно для того чтобы отметить когда закончилось воспроизведение
-            thread = Thread(target=self.change_state,
-                            args=[self.PREVIOUS_STATE, played, os.path.join(directory, filename)])
-            thread.start()
-            print(thread.ident)
 
-        elif (speaker == 'News'):
-            print(f'Запрос на синтез речи: {text}')
-            tts = gTTS(text)
-
-            directory = settings.TEMP_VOICE_DIR
-            filename = f'temp{len(os.listdir(directory)) + 1}.mp3'
-            tts.save(os.path.join(directory, filename))
-            print('Успешно синтезирована речь')
-
-            self.PREVIOUS_STATE = previous_state
-            self.CURRENT_STATE = 'PLAYING_NEWS'
-
-            self.speaker.change_voice(os.path.join(directory, filename))
-            played = self.speaker.play()  # Нужно для того чтобы отметить когда закончилось воспроизведение
-            thread = Thread(target=self.change_state,
-                            args=[self.PREVIOUS_STATE, played, os.path.join(directory, filename)])
-            thread.start()
+            self.change_state_thread = Thread(target=self.change_state,
+                                                               args=[self.PREVIOUS_STATE,self.CURRENT_STATE, played, os.path.join(directory, filename)])
+            self.change_state_thread.start()
 
     def contains(self, text, variants):
         """
@@ -397,17 +333,25 @@ class Assistant:
                 city = city.replace(el, "")
         return city
 
-    def change_state(self, prev, delay, filename):
+    def change_state(self, change_to, change_from, delay, filename=None):
         """
         Функция которая меняет состояние бота после синтеза речи
         :param prev: Состояние, которое будет поставлено
         :param delay: Таймер, после которго будет изменено состояние (в миллисекундах)
         :return: none
         """
-        time.sleep(delay)
+        for i in range(int(delay)):
+            if(self.CURRENT_STATE == change_to):
+                break
+            time.sleep(1)
+        self.CURRENT_STATE = change_to
+        self.PREVIOUS_STATE = change_from
+        print('Состояние сменилось на ', change_to)
+        if(filename!=None):
+            os.popen(f'rm {filename}')
+
+    def change_state1(self,prev):
         self.CURRENT_STATE = prev
-        print('Состояние сменилось на ', prev)
-        os.popen(f'rm {filename}')
 
     def timer(self, delay, filename='alarm.mp3'):
         print(f'Начат таймер на {delay} секунд')

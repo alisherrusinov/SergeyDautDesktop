@@ -145,26 +145,14 @@ def get_news():
 
     return response, links
 
-def get_youtube_music(query: str, music_directory):
+def get_youtube_music(query: str):
     results = YoutubeSearch(query, max_results=5).to_dict() # Первые 5 видосов по запросу
 
     first_song = results[0] # Первая песня (словарь там много ключей)
     print(first_song)
 
-    directory = music_directory
-    file_name = f"{len(os.listdir(directory))+1}"
+    return f"https://www.youtube.com/watch?v={first_song['id']}"
 
-    ydl_opts = { # Настройки для скачивания
-        'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192'}],
-        'outtmpl': music_directory + f'/{file_name}.%(ext)s',
-    }
-    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([f"https://www.youtube.com/watch?v={first_song['id']}"])
-
-
-    file_name = f"{music_directory}/{file_name}.mp3"
-
-    return file_name
 
 
 def get_seconds_from_date(date: str):
