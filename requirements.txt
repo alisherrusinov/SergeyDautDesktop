@@ -5,8 +5,10 @@ chardet==4.0.0
 click==7.1.2
 gTTS==2.2.2
 idna==2.10
+pafy==0.5.5
 playsound==1.2.2
 PyAudio==0.2.11
+pygame==2.0.1
 python-vlc==3.0.11115
 pytz==2021.1
 requests==2.25.1
