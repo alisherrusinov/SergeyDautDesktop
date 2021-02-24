@@ -180,6 +180,7 @@ class Assistant:
                                 for item in self.CHANGE_TIMER_VARIANTS:
                                     if (item in statement):
                                         statement = statement.replace(item, "")
+                                statement = statement.replace('-', '')
 
                                 if ('minute' in statement):
                                     statement = statement.replace('minutes', "")
@@ -289,6 +290,9 @@ class Assistant:
                 except sr.RequestError as e:
                     print("Не могу получить данные от сервиса Google Speech Recognition; {0}".format(e))
                     break
+                except Exception as e:
+                    print(str(e))
+                    self.say('There is some trouble in my work. Can you repeat?')
         except KeyboardInterrupt:
             print("Пока!")
             exit()
