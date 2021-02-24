@@ -301,7 +301,11 @@ class Assistant:
         # TODO спикер работает в отдельном потоке так что можно будет сделать стоппинг как в оригинале
         if (speaker == 'None'):
             print(f'Запрос на синтез речи: {text}')
-            tts = gTTS(text)
+            try:
+                tts = gTTS(text)
+            except AssertionError:
+                print('Поступила пустая строка на синтез')
+                return False
 
             directory = settings.TEMP_VOICE_DIR
             filename = f'temp{len(os.listdir(directory)) + 1}.mp3'
