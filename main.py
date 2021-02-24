@@ -211,7 +211,8 @@ class Assistant:
                                 statement = statement.replace('play ', "")
                                 song = get_youtube_music(statement)
                                 print(song)
-                                self.speaker.change_voice(song, youtube=True)
+                                del self.speaker
+                                self.speaker = player.Player(song, youtube=True)
                                 self.speaker.play()
                                 self.CURRENT_STATE = 'SPEAKING'
                                 self.PREVIOUS_STATE = 'IDLE'
@@ -314,7 +315,10 @@ class Assistant:
             self.PREVIOUS_STATE = previous_state
             self.CURRENT_STATE = 'SPEAKING'
 
-            self.speaker.change_voice(os.path.join(directory, filename))
+            self.speaker.speaker.stop()
+            del self.speaker
+            self.speaker = player.Player(os.path.join(directory, filename))
+
             played = self.speaker.play()  # Нужно для того чтобы отметить когда закончилось воспроизведение
 
             self.change_state_thread = Thread(target=self.change_state,
