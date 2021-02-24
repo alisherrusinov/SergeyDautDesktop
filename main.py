@@ -41,11 +41,11 @@ class Assistant:
         self.EBAY_SEARCHING_VARIANTS = ['ebay']
         self.NEXT_PRODUCT_VARIANTS = ['next', 'move to the next one', 'move on']
         self.PREV_PRODUCT_VARIANTS = ['go back', 'read the last one', 'read the previous one']
-        self.EXIT_EBAY_VARIANTS = ['exit from ebay']
+        self.EXIT_EBAY_VARIANTS = ['exit from ebay', 'exit ebay']
         self.DESCRIPTION_VARIANTS = ['description', 'read the description']
         self.ADDING_TO_BASKET_VARIANTS = ['add to basket']
         self.SHOW_BASKET_VARIANTS = ['show my shopping cart', 'my shopping cart', 'show my basket']
-        self.CLEAR_BASKET_VARIANTS = ['clear my basket', 'clear my shopping cart']
+        self.CLEAR_BASKET_VARIANTS = ['clear my basket', 'clear my shopping cart', 'clear basket']
 
         self.CURRENT_STATE = 'IDLE'
         self.PREVIOUS_STATE = ''
@@ -60,7 +60,7 @@ class Assistant:
         try:
             while True:
                 with self._microphone as source:
-                    audio = self._recognizer.listen(source, phrase_time_limit=5)
+                    audio = self._recognizer.listen(source)
                 try:
                     statement = self._recognizer.recognize_google(audio, language="en_en")
                     statement = statement.lower()
@@ -276,6 +276,10 @@ class Assistant:
                                 for el in self.shopping_cart_names:
                                     answer += f"{el}. "
                                 self.say(answer, previous_state='SEARCHING_PRODUCTS')
+                                break
+                            if (self.contains(statement, self.CLEAR_BASKET_VARIANTS)):
+                                self.clear_basket()
+                                self.say('Cleared the basket', previous_state='SEARCHING_PRODUCTS')
                                 break
 
                     break
