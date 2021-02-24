@@ -18,7 +18,7 @@ class Assistant:
 
         self.speaker = player.Player(os.path.join(settings.TEMPLATES_DIR, 'hi1.mp3'))
 
-        self.ACTIVATION_PHASES = ['system', 'assistant', 'assistance']
+        self.ACTIVATION_PHASES = ['system', 'assistant', 'assistance', 'my sister', 'my system', 'sister']
         self.STOP_PHRASES = ['stop', 'shut up', 'shut down']
         self.CONTINUE_PHRASES = ['resume', 'Resume', 'continue', 'Continue', 'go on', 'Go on']
 
@@ -75,6 +75,7 @@ class Assistant:
                     if (self.contains(statement, self.CONTINUE_PHRASES)):
                         if (self.PREVIOUS_STATE == 'SPEAKING'):
                             self.speaker.play()
+                            # TODO: СДЕЛАТЬ ЗАПУСК ТАЙМЕРА НО С ДЕЛЬТОЙ(В ФАЙЛЕ КАКОМ-ТО БЫЛО ЭТО)
                             self.PREVIOUS_STATE = self.CURRENT_STATE
                             self.CURRENT_STATE = 'SPEAKING'
                             print(f'Cменилось состояние с IDLE на SPEAKING')
@@ -120,7 +121,7 @@ class Assistant:
                         continue
 
 
-                    if (self.contains(statement, self.ACTIVATION_PHASES)):
+                    if (True):# Раньше тут были активационные фразы но я не буду убирать этот иф т.к. с ним код раздельнее
                         statement = statement.replace('assistant', '')
                         statement = statement.replace('a system', '')
                         statement = statement.replace('system', '')
