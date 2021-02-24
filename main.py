@@ -60,7 +60,7 @@ class Assistant:
         try:
             while True:
                 with self._microphone as source:
-                    audio = self._recognizer.listen(source)
+                    audio = self._recognizer.listen(source, phrase_time_limit=5)
                 try:
                     statement = self._recognizer.recognize_google(audio, language="en_en")
                     statement = statement.lower()
@@ -92,20 +92,15 @@ class Assistant:
                                 self.current_product -= 1
                                 self.say(text=self.products[self.current_product], previous_state='SEARCHING_PRODUCTS')
 
-
-                    if (self.CURRENT_STATE == 'ADDING_NOTIFICATION'): # Вот это и следующее условие нужно поместить вне активационной фразы т.к. предполагается что просто фраза идет
-                        self.notification_label = statement
-                        self.say(text='tell me when should i remind', previous_state='ADDING_DATE_NOTIFICATION')
-                        self.CURRENT_STATE = 'ADDING_DATE_NOTIFICATION'
-                        continue
                     if (self.CURRENT_STATE == 'ADDING_DATE_NOTIFICATION'):
+                        self.notification_label = 'Notification'
                         delta = get_seconds_from_date(statement)
                         if (not delta):
                             self.say("I didn't recognised date. Please repeat",
                                      previous_state='ADDING_DATE_NOTIFICATION')
                             break
                         print(delta)
-                        print(self.notification_label)
+                        print('Added new notification')
 
                         print(f'Запрос на синтез речи: {self.notification_label}')
                         tts = gTTS(self.notification_label)
@@ -229,8 +224,8 @@ class Assistant:
                                 break
 
                             if (self.contains(statement, self.NOTIFICATION_ADDING_VARIANTS)):
-                                self.say(text='tell me what should I remind', previous_state='ADDING_NOTIFICATION')
-                                self.CURRENT_STATE = 'ADDING_NOTIFICATION'
+                                self.say(text='tell me when should I remind', previous_state='ADDING_DATE_NOTIFICATION')
+                                self.CURRENT_STATE = 'ADDING_DATE_NOTIFICATION'
                                 continue
                             if (self.contains(statement, self.EXIT_EBAY_VARIANTS)):
                                 self.say("I'm not on ebay")

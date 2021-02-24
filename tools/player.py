@@ -11,9 +11,11 @@ class Player:
             best = video.getbestaudio()
             playurl = best.url
             self.speaker = vlc.MediaPlayer(playurl)
+            self.speaker.audio_set_volume(100)
         else:
             self.path = path
             self.speaker = vlc.MediaPlayer(path)
+            self.speaker.audio_set_volume(100)
 
     def play(self):
         played = False
@@ -26,7 +28,7 @@ class Player:
 
     def play_youtube(self):
         self.speaker.play()
-        time.sleep(2)
+        time.sleep(5)
         return self.speaker.get_length() / 1000
 
     def stop(self):
@@ -39,7 +41,9 @@ class Player:
             playurl = best.url
             del self.speaker
             self.speaker = vlc.MediaPlayer(playurl)
+            self.speaker.audio_set_volume(100)
         else:
             self.path = path
             del self.speaker
             self.speaker = vlc.MediaPlayer(path)
+            self.speaker.audio_set_volume(100)
